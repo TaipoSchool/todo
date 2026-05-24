@@ -3,6 +3,145 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>真道人成長日誌</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;700;900&display=swap');
+        body { font-family: 'Noto Sans TC', sans-serif; background-color: #fdfcf8; }
+        .strikethrough { text-decoration: line-through; color: #a1a1aa; }
+        .custom-shadow { box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1); }
+        .jump-animation { animation: jump 2s infinite; }
+        @keyframes jump { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-15px); } }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col items-center p-4">
+
+    <div class="max-w-md w-full bg-white p-8 rounded-3xl custom-shadow border border-amber-100">
+        <h1 class="text-4xl font-black text-amber-800 text-center mb-6">真道人成長日誌</h1>
+        
+        <div class="flex gap-2 mb-6">
+            <input type="date" id="taskDate" onchange="loadTasks()" class="flex-grow p-4 rounded-2xl border-2 border-amber-200 text-lg text-amber-800 font-bold focus:outline-none">
+            <button onclick="goToToday()" class="bg-amber-100 text-amber-800 font-bold px-4 rounded-2xl hover:bg-amber-200 transition">今日</button>
+        </div>
+
+        <div class="mb-8">
+            <div class="flex justify-between text-lg font-bold text-amber-700 mb-2">
+                <span>今日完成進度</span>
+                <span id="progressText">0%</span>
+            </div>
+            <div class="w-full bg-amber-100 rounded-full h-6 overflow-hidden">
+                <div id="progressBar" class="bg-amber-500 h-full w-0 transition-all duration-500"></div>
+            </div>
+        </div>
+
+        <div class="flex flex-col gap-3 mb-8 w-full">
+            <input type="text" id="taskInput" placeholder="輸入想做嘅事..." class="w-full p-4 rounded-2xl border-2 border-amber-200 text-xl focus:outline-none focus:border-amber-400">
+            <button onclick="addCustomTask()" class="w-full bg-amber-500 text-white font-black py-4 rounded-2xl text-xl hover:bg-amber-600 transition shadow-lg">加入新任務</button>
+        </div>
+
+        <div class="grid grid-cols-2 gap-3 mb-8">
+            <button onclick="addTask('做功課')" class="bg-amber-100 hover:bg-amber-200 text-amber-900 font-bold py-3 px-2 rounded-2xl text-sm md:text-lg transition">做功課</button>
+            <button onclick="addTask('溫默書')" class="bg-amber-100 hover:bg-amber-200 text-amber-900 font-bold py-3 px-2 rounded-2xl text-sm md:text-lg transition">溫默書</button>
+            <button onclick="addTask('Reading log')" class="bg-amber-100 hover:bg-amber-200 text-amber-900 font-bold py-3 px-2 rounded-2xl text-sm md:text-lg transition">Reading log</button>
+            <button onclick="addTask('網上功課')" class="bg-amber-100 hover:bg-amber-200 text-amber-900 font-bold py-3 px-2 rounded-2xl text-sm md:text-lg transition">網上功課</button>
+            <button onclick="addTask('整理書包')" class="bg-amber-100 hover:bg-amber-200 text-amber-900 font-bold py-3 px-2 rounded-2xl text-sm md:text-lg transition">整理書包</button>
+            <button onclick="addTask('看書')" class="bg-amber-100 hover:bg-amber-200 text-amber-900 font-bold py-3 px-2 rounded-2xl text-sm md:text-lg transition">看書</button>
+        </div>
+
+        <ul id="taskList" class="space-y-4 mb-8"></ul>
+
+        <div class="flex flex-col items-center border-t pt-8 border-amber-50">
+            <svg viewBox="0 0 200 200" class="w-40 h-40 mb-4 jump-animation">
+                <circle cx="100" cy="70" r="40" fill="#FFE0BD" />
+                <path d="M70 100 L130 100 L110 130 L90 130 Z" fill="white" stroke="#E3A648" stroke-width="3" />
+                <path d="M60 130 L140 130 L130 180 L70 180 Z" fill="#E3A648" />
+                <circle cx="85" cy="65" r="5" fill="#333" />
+                <circle cx="115" cy="65" r="5" fill="#333" />
+                <path d="M85 85 Q100 95 115 85" stroke="#333" stroke-width="3" fill="none" />
+            </svg>
+            <p id="message" class="text-xl font-bold text-amber-800 text-center leading-relaxed">我係真道人，今日我哋一齊努力，加油！</p>
+        </div>
+    </div>
+
+    <script>
+        const dateInput = document.getElementById('taskDate');
+        dateInput.valueAsDate = new Date();
+
+        function goToToday() {
+            dateInput.valueAsDate = new Date();
+            loadTasks();
+        }
+
+        function getStorageKey() { return 'tasks_' + dateInput.value; }
+
+        function saveTasks() {
+            const tasks = [];
+            document.querySelectorAll('#taskList li').forEach(li => {
+                tasks.push({
+                    text: li.querySelector('span').innerText,
+                    checked: li.querySelector('input').checked
+                });
+            });
+            localStorage.setItem(getStorageKey(), JSON.stringify(tasks));
+            updateProgress();
+        }
+
+        function loadTasks() {
+            const ul = document.getElementById('taskList');
+            ul.innerHTML = "";
+            const tasks = JSON.parse(localStorage.getItem(getStorageKey()) || "[]");
+            tasks.forEach(t => renderTask(t.text, t.checked));
+            updateProgress();
+        }
+
+        function renderTask(text, checked) {
+            const ul = document.getElementById('taskList');
+            const li = document.createElement('li');
+            li.className = "flex items-center gap-4 bg-white border-2 border-amber-100 p-5 rounded-2xl";
+            li.innerHTML = `
+                <input type="checkbox" class="w-10 h-10 accent-amber-500 cursor-pointer" ${checked ? 'checked' : ''} onchange="handleToggle(this)">
+                <span class="text-2xl font-bold text-gray-700 flex-grow ${checked ? 'strikethrough' : ''}">${text}</span>
+                <button onclick="this.parentElement.remove(); saveTasks();" class="text-rose-400 font-black text-xl hover:text-rose-600 transition">✕</button>
+            `;
+            ul.appendChild(li);
+        }
+
+        function handleToggle(checkbox) {
+            const span = checkbox.nextElementSibling;
+            if (checkbox.checked) {
+                span.classList.add('strikethrough');
+                document.getElementById('message').innerText = "做得好！繼續努力！";
+                confetti({ particleCount: 100, spread: 70, origin: { y: 0.6 } });
+            } else {
+                span.classList.remove('strikethrough');
+            }
+            saveTasks();
+        }
+
+        function addTask(text) { renderTask(text, false); saveTasks(); }
+        function addCustomTask() {
+            const input = document.getElementById('taskInput');
+            if (input.value.trim() !== "") { addTask(input.value); input.value = ""; }
+        }
+
+        function updateProgress() {
+            const total = document.querySelectorAll('#taskList li').length;
+            const completed = document.querySelectorAll('#taskList input:checked').length;
+            const percent = total === 0 ? 0 : Math.round((completed / total) * 100);
+            document.getElementById('progressBar').style.width = percent + "%";
+            document.getElementById('progressText').innerText = percent + "%";
+            if (percent === 100 && total > 0) confetti({ particleCount: 200, spread: 100, origin: { y: 0.5 } });
+        }
+
+        loadTasks();
+    </script>
+</body>
+</html><!DOCTYPE html>
+<html lang="zh-HK">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>我的生活日誌 - 待辦事項</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
